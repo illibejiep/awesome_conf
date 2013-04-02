@@ -1,6 +1,3 @@
--- Themes define colours, icons, and wallpapers
-beautiful.init("/usr/share/awesome/themes/my/theme.lua")
-
 -- This is used later as the default terminal and editor to run.
 terminal = "x-terminal-emulator"
 editor = os.getenv("EDITOR") or "editor"

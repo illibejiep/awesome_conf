@@ -12,29 +12,33 @@ require("debian.menu")
 
 awful.util.spawn_with_shell('~/init')
 
+home_dir = os.getenv("HOME")
 -- Error handling
-dofile("/home/vlapin/.config/awesome/error_handling.lua")
+dofile(home_dir .. "/.config/awesome/error_handling.lua")
+
+-- Themes define colours, icons, and wallpapers
+beautiful.init(home_dir .. "/.config/awesome/themes/my/theme.lua")
 
 -- Variable definitions
-dofile("/home/vlapin/.config/awesome/variables.lua")
+dofile(home_dir .. "/.config/awesome/variables.lua")
 
 -- Tags
-dofile("/home/vlapin/.config/awesome/tags.lua")
+dofile(home_dir .. "/.config/awesome/tags.lua")
 
 -- Menu
-dofile("/home/vlapin/.config/awesome/menu.lua")
+dofile(home_dir .. "/.config/awesome/menu.lua")
 
 -- Wibox
-dofile("/home/vlapin/.config/awesome/wibox.lua")
+dofile(home_dir .. "/.config/awesome/wibox.lua")
 
 -- Mouse bindings
-dofile("/home/vlapin/.config/awesome/mouse_bindings.lua")
+dofile(home_dir .. "/.config/awesome/mouse_bindings.lua")
 
 -- Key bindings
-dofile("/home/vlapin/.config/awesome/key_bindings.lua")
+dofile(home_dir .. "/.config/awesome/key_bindings.lua")
 
 -- Rules
-dofile("/home/vlapin/.config/awesome/rules.lua")
+dofile(home_dir .. "/.config/awesome/rules.lua")
 
 -- Signals
-dofile("/home/vlapin/.config/awesome/signals.lua")
+dofile(home_dir .. "/.config/awesome/signals.lua")
