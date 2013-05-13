@@ -13,8 +13,8 @@ awful.rules.rules = {
         border_width = 0
       },
       callback = function (c)
-        c:add_signal("property::y", function() c:geometry({x = 1280, y = 0}) end)
-        c:add_signal("property::x", function() c:geometry({x = 1280, y = 0}) end)
+        c:add_signal("property::y", function() c:geometry({x = 0, y = 0}) end)
+        c:add_signal("property::x", function() c:geometry({x = 0, y = 0}) end)
       end
     },
     { 
@@ -23,8 +23,8 @@ awful.rules.rules = {
         border_width = 1
       },
       callback = function (c)
-        c:add_signal("property::y", function() c:geometry({x = 1280, y = -22}) end)
-        c:add_signal("property::x", function() c:geometry({x = 1280, y = -22}) end)
+        c:add_signal("property::y", function() c:geometry({x = 0, y = -22}) end)
+        c:add_signal("property::x", function() c:geometry({x = 0, y = -22}) end)
       end
     },
     -- Set Firefox to always map on tags number 2 of screen 1.
