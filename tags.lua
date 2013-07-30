@@ -1,4 +1,4 @@
--- Define a tag table which hold all screen tags.
+end
 tags = {}
 for s = 1, screen.count() do
     -- Each screen has its own tag table.

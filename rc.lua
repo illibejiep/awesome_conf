@@ -1,18 +1,20 @@
 -- Standard awesome library
-require("awful")
+local gears = require("gears")
+local awful = require("awful")
+awful.rules = require("awful.rules")
 require("awful.autofocus")
-require("awful.rules")
+-- Widget and layout library
+local wibox = require("wibox")
 -- Theme handling library
-require("beautiful")
+local beautiful = require("beautiful")
 -- Notification library
-require("naughty")
-
--- Load Debian menu entries
-require("debian.menu")
+local naughty = require("naughty")
+local menubar = require("menubar")
 
 awful.util.spawn_with_shell('~/init')
 
 home_dir = os.getenv("HOME")
+
 -- Error handling
 dofile(home_dir .. "/.config/awesome/error_handling.lua")
 
