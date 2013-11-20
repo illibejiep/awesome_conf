@@ -397,7 +397,14 @@ for i = 1, 9 do
 end
 
 clientbuttons = awful.util.table.join(
-    awful.button({ "Shift"}, 1, function (c) client.focus = c; c:raise() end),
+    awful.button({ }, 1, function (c) 
+      if c.instance ~= 'sun-awt-X11-XFramePeer' and c.instance ~= 'sun-awt-X11-XWindowPeer' and c.instance ~= 'sun-awt-X11-XDialogPeer' then
+        -- naughty.notify({ preset = naughty.config.presets.critical,
+        --            title = c.instance,
+        --             text = c.class})
+        client.focus = c; c:raise() 
+      end
+    end),
     awful.button({ modkey }, 1, awful.mouse.client.move),
     awful.button({ modkey }, 3, awful.mouse.client.resize))
 
