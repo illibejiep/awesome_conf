@@ -11,6 +11,7 @@ require("naughty")
 require("debian.menu")
 
 awful.util.spawn_with_shell('~/init')
+awful.util.spawn_with_shell("xscreensaver -no-splash")
 
 home_dir = os.getenv("HOME")
 -- Error handling

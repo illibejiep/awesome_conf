@@ -13,20 +13,21 @@ awful.rules.rules = {
         border_width = 0
       },
       callback = function (c)
-        c:add_signal("property::y", function() c:geometry({x = 0, y = 0}) end)
-        c:add_signal("property::x", function() c:geometry({x = 0, y = 0}) end)
+        c:add_signal("property::y", function() c:geometry({x = 0, y = -1}) end)
+        c:add_signal("property::x", function() c:geometry({x = 0, y = -1}) end)
       end
     },
-    { 
-      rule_any = { class = {  "sun-awt-X11-XFramePeer", "jetbrains-phpstorm"} },
-      properties = { 
-        border_width = 1
-      },
-      callback = function (c)
-        c:add_signal("property::y", function() c:geometry({x = 0, y = -22}) end)
-        c:add_signal("property::x", function() c:geometry({x = 0, y = -22}) end)
-      end
-    },
+    
+    --{ 
+    --  rule_any = { class = {"jetbrains-phpstorm"} },
+    --  properties = { 
+    --    border_width = 1
+    --  },
+    --  callback = function (c)
+    --    c:add_signal("property::y", function() c:geometry({x = 0, y = -18}) end)
+    --    c:add_signal("property::x", function() c:geometry({x = 0, y = -18}) end)
+    --  end
+    --},
     -- Set Firefox to always map on tags number 2 of screen 1.
     -- { rule = { class = "Firefox" },
     --   properties = { tag = tags[1][2] } },
