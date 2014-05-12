@@ -86,24 +86,28 @@ end
 mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
 
 mylauncher:connect_signal("button::press",function ()
-  mylauncher.menu = awful.menu.clients()
+  mylauncher.menu = awful.menu.clients({x = 1900})
   end
 )
 -- Widgets that are aligned to the left
 
-clock_box = awful.wibox( { position = "bottom", screen = 1, ontop = true, width = 260, height = 16} )
+local layout = wibox.layout.fixed.horizontal()
+layout:add(awful.widget.textclock())
+layout:add(wibox.widget.systray())
+layout:add(mylauncher)
+right_layout = wibox.layout.align.horizontal()
+right_layout:set_right(layout)
+
+clock_box = awful.wibox( { position = "right", screen = 1, ontop = true, width = 160, height = 16, y = 1184} )
 clock_box:set_bg("#ffffff00")
+clock_box:set_widget(right_layout)
 
-local left_layout = wibox.layout.fixed.horizontal()
-left_layout:add(mylauncher)
-left_layout:add(wibox.widget.systray())
-left_layout:add(awful.widget.textclock())
-
+command_box = awful.wibox( { position = "bottom", screen = 1, ontop = true, width = 260, height = 16} )
+command_box:set_bg("#ffffff00")
 command = mywidget.command({prompt = ': ', done_callback = function () box.visible = false end })
+command_box:set_widget(command)
 
-left_layout:add(command)
 
-clock_box:set_widget(left_layout)
 
 
 
