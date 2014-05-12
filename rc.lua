@@ -74,14 +74,6 @@ local layouts =
 }
 -- }}}
 
--- {{{ Wallpaper-
--- if beautiful.wallpaper then
---    for s = 1, screen.count() do
---        gears.wallpaper.maximized(beautiful.wallpaper, s, true)
---    end
--- end
--- }}}
-
 -- {{{ Tags
 -- Define a tag table which hold all screen tags.
 tags = {}
@@ -91,17 +83,29 @@ for s = 1, screen.count() do
 end
 -- }}}
 
-clock_box = awful.wibox( { position = "bottom", screen = 1, ontop = false, width = 120, height = 16, type = 'normal' } )
-clock_box:set_bg("#000000")
--- Create a textclock widget
-mytextclock = awful.widget.textclock()
-clock_box:set_widget(mytextclock)
+mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
 
-box = awful.wibox( { position = "bottom", screen = 1, ontop = true, width = 120, height = 16, type = 'normal' } )
-box:set_bg("#000000")
+mylauncher:connect_signal("button::press",function ()
+  mylauncher.menu = awful.menu.clients()
+  end
+)
+-- Widgets that are aligned to the left
+
+clock_box = awful.wibox( { position = "bottom", screen = 1, ontop = true, width = 260, height = 16} )
+clock_box:set_bg("#ffffff00")
+
+local left_layout = wibox.layout.fixed.horizontal()
+left_layout:add(mylauncher)
+left_layout:add(wibox.widget.systray())
+left_layout:add(awful.widget.textclock())
+
 command = mywidget.command({prompt = ': ', done_callback = function () box.visible = false end })
-box:set_widget(command)
-box.visible = false
+
+left_layout:add(command)
+
+clock_box:set_widget(left_layout)
+
+
 
 -- {{{ Key bindings
 globalkeys = awful.util.table.join(
@@ -122,7 +126,6 @@ globalkeys = awful.util.table.join(
     -- Prompt
     awful.key({ modkey },            "r",     
     	function () 
-    	   box.visible = true
          command:run()
     	end
     )
@@ -201,7 +204,7 @@ awful.rules.rules = {
                      buttons = clientbuttons } },
     { 
       rule_any = { class = {"cairo-dock", "Cairo-dock" } },
-      properties = { border_width = 0 , ontop = true } },
+      properties = { border_width = 0 , ontop = false } },
     { 
       rule_any = { class = { "chrome", "Chrome", "x-www-browser", "X-www-browser", "chromium-browser", "Chromium-browser","chromium", "Chromium"} },
       properties = { 
