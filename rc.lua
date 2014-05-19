@@ -82,30 +82,45 @@ for s = 1, screen.count() do
     tags[s] = awful.tag({ 1, 2, 3, 4, 5, 6, 7, 8, 9 }, s, layouts[1])
 end
 -- }}}
+box_layout = {}
+box = {}
+mylauncher = {}
+layout = {}
+right_layout = {}
+command = {}
+clock_box = {}
+command_box = {}
 
-mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
+for s = 1, screen.count() do
 
-mylauncher:connect_signal("button::press",function ()
-  mylauncher.menu = awful.menu.clients({x = 1900})
+  mylauncher[s] = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
+
+  mylauncher[s]:connect_signal("button::press",function ()
+      mylauncher[mouse.screen].menu = awful.menu.clients({x = 1900})
+    end
+  )
+
+  layout[s] = wibox.layout.fixed.horizontal()
+  layout[s]:add(awful.widget.textclock())
+
+  if s == screen.count() then
+    layout[s]:add(wibox.widget.systray())
   end
-)
--- Widgets that are aligned to the left
 
-local layout = wibox.layout.fixed.horizontal()
-layout:add(awful.widget.textclock())
-layout:add(wibox.widget.systray())
-layout:add(mylauncher)
-right_layout = wibox.layout.align.horizontal()
-right_layout:set_right(layout)
+  layout[s]:add(mylauncher[s])
+  right_layout[s] = wibox.layout.align.horizontal()
+  right_layout[s]:set_right(layout[s])
+  command[s] = awful.widget.prompt({prompt = ': '})
 
-clock_box = awful.wibox( { position = "right", screen = 1, ontop = true, width = 160, height = 16, y = 1184} )
-clock_box:set_bg("#ffffff00")
-clock_box:set_widget(right_layout)
+  box_layout[s] = wibox.layout.align.horizontal();
+  box_layout[s]:set_left(command[s])
+  box_layout[s]:set_right(right_layout[s])
 
-command_box = awful.wibox( { position = "bottom", screen = 1, ontop = true, width = 260, height = 16} )
-command_box:set_bg("#ffffff00")
-command = mywidget.command({prompt = ': ', done_callback = function () box.visible = false end })
-command_box:set_widget(command)
+  box[s] = awful.wibox( { position = "bottom", screen = s, ontop = true, height = 16 } )
+  box[s]:set_bg("#ffffff00")
+  box[s]:set_widget(box_layout[s])
+ 
+end
 
 
 
@@ -118,6 +133,9 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey }, "p", function () awful.util.spawn("poweroff") end ),
     awful.key({ modkey, "Control" }, "l", function () awful.util.spawn("xscreensaver-command -lock") end),
     -- Layout manipulation
+    awful.key({ modkey,           }, "space", function () awful.layout.inc(layouts,  1) end),
+    awful.key({ modkey, "Shift"   }, "space", function () awful.layout.inc(layouts, -1) end),
+
     awful.key({ modkey,           }, "Tab",
         function ()
             awful.client.focus.byidx(-1)
@@ -130,7 +148,7 @@ globalkeys = awful.util.table.join(
     -- Prompt
     awful.key({ modkey },            "r",     
     	function () 
-         command:run()
+         command[mouse.screen]:run()
     	end
     )
 )
