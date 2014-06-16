@@ -243,8 +243,8 @@ awful.rules.rules = {
         border_width = 1
       },
       callback = function (c)
-        c:connect_signal("property::y", function() c:geometry({x = 0, y = -22}) end)
-        c:connect_signal("property::x", function() c:geometry({x = 0, y = -22}) end)
+        --c:connect_signal("property::y", function() c:geometry({x = 0, y = -22}) end)
+        --c:connect_signal("property::x", function() c:geometry({x = 0, y = -22}) end)
       end
     }
 }
