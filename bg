@@ -1,8 +1,9 @@
 #!/bin/bash
 
-while echo 1
-do
-php psdot.php > A.dot
+#while echo 1
+#do
+cd ~/.config/awesome
+/usr/bin/php psdot.php > A.dot
 dot -Tpng -oA.png A.dot
-sleep 1
-done
+#sleep 1
+#done

@@ -28,22 +28,21 @@ graph A {
         dpi=120
         size="16,10"
         layout="neato"
-        bgcolor="#1E231F"
+        bgcolor="#1E2320"
         sep="300,1"
         splines=curved
         node [
                 shape=circle
                 style="filled"
-                gradientangle=100
-                fillcolor="#1E231F11:#F0E0AD11"
-                color="#ffffff00#"
-                fontcolor="#7F9F7Faa"
+                fillcolor="#F0E0AD00"
+                color="#ffffff33#"
+                fontcolor="#F0E0ADbb"
                 fontname="ubuntu"
                 fixedsize=true
         ]
         edge [
                 len=1.6
-                color="#F0E0AD55"
+                color="#7F9F7Faa"
         ]
 ';
 

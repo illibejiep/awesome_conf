@@ -44,6 +44,34 @@ end
 -- Themes define colours, icons, and wallpapers
 beautiful.init(home_dir .. "/.config/awesome/themes/my/theme.lua")
 
+if beautiful.wallpaper then
+  if beautiful.background_color then
+    bg_color = beautiful.background_color
+  else
+    bg_color = "#000000"
+  end 
+
+  bg_surface = gears.surface.load(beautiful.wallpaper)
+
+  bg_timer = timer { timeout = 1 }
+  bg_timer:connect_signal("timeout", function()
+      awful.util.spawn_with_shell(home_dir .. '/.config/awesome/bg')
+      bg_surface = gears.surface.load_uncached(beautiful.wallpaper)
+      for s = 1, screen.count() do
+          gears.wallpaper.fit(beautiful.wallpaper,s,bg_color)
+      end
+      bg_timer:stop()
+      bg_timer.timeout = 5
+      bg_timer:start()
+    end 
+  )
+
+  for s = 1, screen.count() do
+      gears.wallpaper.fit(bg_surface,s,bg_color)
+  end
+  bg_timer:start()
+end
+
 -- This is used later as the default terminal and editor to run.
 terminal = "xterm"
 editor = os.getenv("EDITOR") or "nano"
