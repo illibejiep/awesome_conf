@@ -4,6 +4,8 @@
 #do
 cd ~/.config/awesome
 /usr/bin/php psdot.php > A.dot
-dot -Tpng -oA.png A.dot
+dot -Tpng -otmp.png A.dot
+mv tmp.png A.png
+chmod 777 A.png
 #sleep 1
 #done

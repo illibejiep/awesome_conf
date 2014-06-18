@@ -52,8 +52,9 @@ $maxFont = 100;
 
 foreach ($pslist as $id=>$psData) {
     $fontSize = (int)($minFont + $psData['mem']*$maxFont/$maxMem);
+    $lineWidth = (int)((1 + $psData['cpu']*15/$maxCpu));
 
-    echo 'p'.$id.' [label="'.$psData['name'].'" fontsize="'.$fontSize.'" width="'.($fontSize/30).'"]'.PHP_EOL;
+    echo 'p'.$id.' [label="'.$psData['name'].'" fontsize="'.$fontSize.'" width="'.($fontSize/30).'" penwidth='.$lineWidth.']'.PHP_EOL;
 }
 foreach ($pslist as $id=>$psData)
     if ($psData['pid'])
