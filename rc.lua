@@ -120,7 +120,6 @@ clock_box = {}
 command_box = {}
 
 for s = 1, screen.count() do
-
   mylauncher[s] = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
 
   mylauncher[s]:connect_signal("button::press",function ()
@@ -134,6 +133,8 @@ for s = 1, screen.count() do
   if s == screen.count() then
     layout[s]:add(wibox.widget.systray())
   end
+
+  layout[s]:add(awful.widget.layoutbox(s))
 
   layout[s]:add(mylauncher[s])
   right_layout[s] = wibox.layout.align.horizontal()
