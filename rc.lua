@@ -145,7 +145,7 @@ for s = 1, screen.count() do
   box_layout[s]:set_left(command[s])
   box_layout[s]:set_right(right_layout[s])
 
-  box[s] = awful.wibox( { position = "bottom", screen = s, ontop = true, height = 16 } )
+  box[s] = awful.wibox( { position = "bottom", screen = s, ontop = false, height = 16 } )
   box[s]:set_bg("#ffffff00")
   box[s]:set_widget(box_layout[s])
  
