@@ -134,6 +134,34 @@ for s = 1, screen.count() do
     layout[s]:add(wibox.widget.systray())
   end
 
+  fcfull = io.open('/sys/class/power_supply/BAT1/charge_full')
+  cfull = fcfull:read()
+  fcfull:close()
+
+  fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
+  cnow = fcnow:read()
+  fcnow:close()
+
+  percents = 100*cnow/cfull
+
+  battery = wibox.widget.textbox()
+  battery:set_text(math.floor(percents) .. ":???")
+  
+  batteryInterval = 5
+  batteryTimer = timer({timeout = batteryInterval})
+  batteryTimer:connect_signal('timeout', function () 
+    fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
+    cnow = fcnow:read()
+    fcnow:close()
+    diff = percents - 100*cnow/cfull
+    percents = 100*cnow/cfull
+    battery:set_text(math.floor(percents) .. ":" .. math.floor(batteryInterval*percents/(60*diff)))
+  end)
+  batteryTimer:start()
+  layout[s]:add(battery)
+
+
+
   layout[s]:add(awful.widget.layoutbox(s))
 
   layout[s]:add(mylauncher[s])
@@ -184,6 +212,7 @@ globalkeys = awful.util.table.join(
 
 clientkeys = awful.util.table.join(
     awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
+    awful.key({ modkey,           }, "m",      function (c) c.maximized = not c.maximized  end),
     awful.key({ modkey, "Shift"   }, "c",      function (c) c:kill()                         end),
     awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ),
     awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end),
