@@ -147,7 +147,7 @@ for s = 1, screen.count() do
   battery = wibox.widget.textbox()
   battery:set_text(math.floor(percents) .. ":???")
   
-  batteryInterval = 5
+  batteryInterval = 10
   batteryTimer = timer({timeout = batteryInterval})
   batteryTimer:connect_signal('timeout', function () 
     fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
@@ -155,7 +155,10 @@ for s = 1, screen.count() do
     fcnow:close()
     diff = percents - 100*cnow/cfull
     percents = 100*cnow/cfull
-    battery:set_text(math.floor(percents) .. ":" .. math.floor(batteryInterval*percents/(60*diff)))
+    seconds = batteryInterval*percents/diff
+    hour = math.floor(seconds/3600)
+    minutes = math.floor(seconds/60 - hour*60)
+    battery:set_text(math.floor(percents) .. "% " .. hour .. 'h ' .. minutes ..'m')
   end)
   batteryTimer:start()
   layout[s]:add(battery)
