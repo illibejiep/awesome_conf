@@ -12,9 +12,11 @@ local naughty = require("naughty")
 local menubar = require("menubar")
 
 local mywidget = require("mywidget")
+local cjson = require('cjson')
+
+cjson.encode_sparse_array(true)
 
 home_dir = os.getenv("HOME")
-
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
 -- another config (This code will only ever execute for the fallback config)
@@ -24,6 +26,15 @@ if awesome.startup_errors then
                      text = awesome.startup_errors })
 end
 
+function debugIt(val)
+  naughty.notify(
+    {
+      preset = naughty.config.presets.critical,
+      title = "debug",
+      text = cjson.encode(val)
+    }
+  )
+end
 -- Handle runtime errors after startup
 do
     local in_error = false
@@ -39,6 +50,8 @@ do
     end)
 end
 -- }}}
+
+awful.util.spawn('guake')
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, and wallpapers
@@ -73,7 +86,7 @@ if beautiful.wallpaper then
 end
 
 -- This is used later as the default terminal and editor to run.
-terminal = "xterm"
+terminal = "gnome-terminal"
 editor = os.getenv("EDITOR") or "nano"
 editor_cmd = terminal .. " -e " .. editor
 
@@ -118,6 +131,7 @@ right_layout = {}
 command = {}
 clock_box = {}
 command_box = {}
+clientsPosition = {}
 
 for s = 1, screen.count() do
   mylauncher[s] = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
@@ -130,7 +144,7 @@ for s = 1, screen.count() do
   layout[s] = wibox.layout.fixed.horizontal()
   layout[s]:add(awful.widget.textclock())
 
-  if s == screen.count() then
+  if s == 1 then
     layout[s]:add(wibox.widget.systray())
   end
 
@@ -145,9 +159,9 @@ for s = 1, screen.count() do
   percents = 100*cnow/cfull
 
   battery = wibox.widget.textbox()
-  battery:set_text(math.floor(percents) .. ":???")
+  battery:set_text(math.floor(percents) .. "% ?h ??m")
   
-  batteryInterval = 10
+  batteryInterval = 15
   batteryTimer = timer({timeout = batteryInterval})
   batteryTimer:connect_signal('timeout', function () 
     fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
@@ -155,10 +169,18 @@ for s = 1, screen.count() do
     fcnow:close()
     diff = percents - 100*cnow/cfull
     percents = 100*cnow/cfull
-    seconds = batteryInterval*percents/diff
+    if diff >=0 then
+      seconds = batteryInterval*percents/diff
+    else
+      seconds = batteryInterval*(100 - percents)/diff
+    end
     hour = math.floor(seconds/3600)
     minutes = math.floor(seconds/60 - hour*60)
     battery:set_text(math.floor(percents) .. "% " .. hour .. 'h ' .. minutes ..'m')
+
+    flog = io.open('/tmp/battery.log','a+')
+    flog:write(os.time() .. ',' ..percents .. "\n")
+    flog:close()
   end)
   batteryTimer:start()
   layout[s]:add(battery)
@@ -179,22 +201,82 @@ for s = 1, screen.count() do
   box[s] = awful.wibox( { type = "normal", position = "bottom", screen = s, ontop = false, height = 16 } )
   box[s]:set_bg("#ffffff00")
   box[s]:set_widget(box_layout[s])
- 
 end
-
-
-
-
 
 -- {{{ Key bindings
 globalkeys = awful.util.table.join(
---    awful.key({ modkey}, "z", function () awful.util.spawn("nvidia-settings --assign CurrentMetaMode=\"HDMI-0: 1920x1200 { ForceCompositionPipeline = On }\"") end ),
---    awful.key({ modkey}, "x", function () awful.util.spawn("nvidia-settings --assign CurrentMetaMode=\"HDMI-0: 1920x1200 { ForceCompositionPipeline = Off }\"") end ),
+    awful.key({ modkey}, "Left", 
+      function()
+        fb = io.open('/sys/class/backlight/intel_backlight/brightness', 'w+')
+        br = tonumber(fb:read())
+        fb:write(0)
+        fb:close()
+      end
+    ),
+    awful.key({ modkey}, "Right", 
+      function()
+        fb = io.open('/sys/class/backlight/intel_backlight/brightness', 'w+')
+        br = tonumber(fb:read())
+        fb:write(187)
+        fb:close()
+      end
+    ),
+    awful.key({ modkey}, "Up", 
+      function()
+        fb = io.open('/sys/class/backlight/intel_backlight/brightness', 'w+')
+        br = tonumber(fb:read())
+        br = br + 3
+        if (br > 187) then
+          br = 187
+        end
+
+        fb:write(br)
+        fb:close()
+      end
+    ),
+    awful.key({ modkey}, "Down", 
+      function()
+        fb = io.open('/sys/class/backlight/intel_backlight/brightness', 'w+')
+        br = tonumber(fb:read())
+        br = br - 3
+        if (br < 0) then
+          br = 0
+        end
+
+        fb:write(br)
+        fb:close()
+      end
+    ),
+    awful.key({ modkey}, "h", 
+      function ()
+        clientsPosition = {}
+        
+        for c in awful.client.iterate(function(c)  return true end) do    
+            clientsPosition[c.window] = {
+              geometry = c:geometry(),
+              screen = c.screen,
+              tag = awful.tag.getidx(c:tags()[1]),
+              sx = screen[c.screen].geometry.x,
+              sy = screen[c.screen].geometry.y,
+            }
+        end
+        cPos = io.open('/tmp/clients_position','w+')
+        cPos:write(cjson.encode(clientsPosition))
+        cPos:close()
+        os.execute("xrandr --output HDMI2 --mode 3840x2160 --left-of eDP1") 
+      end 
+    ),
+    awful.key({ modkey}, "l", 
+      function () 
+        os.execute("xrandr --output HDMI2 --mode 1920x1080 --left-of eDP1")
+      end 
+    ),
     awful.key({ modkey }, "p", function () awful.util.spawn("poweroff") end ),
     awful.key({ modkey, "Control" }, "l", function () awful.util.spawn("xscreensaver-command -lock") end),
     -- Layout manipulation
     awful.key({ modkey,           }, "space", function () awful.layout.inc(layouts,  1) end),
     awful.key({ modkey, "Shift"   }, "space", function () awful.layout.inc(layouts, -1) end),
+    awful.key({ modkey, "Control" }, "space", function () awful.layout.set(awful.layout.suit.floating) end),
 
     awful.key({ modkey,           }, "Tab",
         function ()
@@ -216,6 +298,14 @@ globalkeys = awful.util.table.join(
 clientkeys = awful.util.table.join(
     awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
     awful.key({ modkey,           }, "m",      function (c) c.maximized = not c.maximized  end),
+    awful.key({ modkey, "Shift"   }, "m",      
+      function (c)
+        c.maximized = true
+        geometry = c:geometry()
+        c.maximized = false
+        c:geometry(geometry)
+      end
+    ),
     awful.key({ modkey, "Shift"   }, "c",      function (c) c:kill()                         end),
     awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ),
     awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end),
@@ -288,14 +378,27 @@ awful.rules.rules = {
     { 
       rule_any = { class = {"cairo-dock", "Cairo-dock" } },
       properties = { border_width = 0 , ontop = false } },
+    -- cliens without border
     { 
-      rule_any = { class = { "chrome", "Chrome", "x-www-browser", "X-www-browser", "chromium-browser", "Chromium-browser","chromium", "Chromium"} },
+      rule_any = { class = { 
+          "chrome", 
+          "Chrome", 
+          "x-www-browser", 
+          "X-www-browser", 
+          "chromium-browser", 
+          "Chromium-browser",
+          "chromium", 
+          "Chromium",
+          "guake",
+          "Guake",
+          "Main.py"
+      } },
       properties = { 
         border_width = 0
       },
       callback = function (c)
-        c:connect_signal("property::y", function() c:geometry({x = 0, y = 0}) end)
-        c:connect_signal("property::x", function() c:geometry({x = 0, y = 0}) end)
+        --c:connect_signal("property::y", function() c:geometry({x = 0, y = 0}) end)
+        --c:connect_signal("property::x", function() c:geometry({x = 0, y = 0}) end)
       end
     },
     { 
@@ -310,6 +413,14 @@ awful.rules.rules = {
     }
 }
 -- }}}
+
+clientsPosition = {}
+cPos = io.open('/tmp/clients_position','r')
+if (cPos) then
+  clientsPosition = cjson.decode(cPos:read())
+  cPos:close()
+end
+--debugIt(clientsPosition)
 
 -- {{{ Signals
 -- Signal function to execute when a new client appears.
@@ -378,6 +489,24 @@ client.connect_signal("manage", function (c, startup)
 
         awful.titlebar(c):set_widget(layout)
     end
+    awful.client.movetoscreen(c, mouse.screen)
+
+    for id,data in pairs(clientsPosition) do
+      id = id + 0
+      if (id == c.window) then 
+        awful.client.movetoscreen(c, data.screen)
+        awful.client.movetotag(c, tags[tag])
+        
+        cgeometry = data.geometry
+        data.geometry.x = screen[c.screen].geometry.x + data.geometry.x - data.sx;
+        data.geometry.y = screen[c.screen].geometry.y + data.geometry.y - data.sy;
+        c:geometry(cgeometry)
+        --naughty.notify({ preset = naughty.config.presets.critical,
+        --             title = c.name,
+        --             text = cjson.encode(cgeometry)})
+      end
+    end
+
 end)
 
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
