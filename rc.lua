@@ -133,6 +133,10 @@ clock_box = {}
 command_box = {}
 clientsPosition = {}
 
+batteryHistory = {}
+batteryHistorySize = 0
+batteryWidth = 500
+
 for s = 1, screen.count() do
   mylauncher[s] = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
 
@@ -142,54 +146,121 @@ for s = 1, screen.count() do
   )
 
   layout[s] = wibox.layout.fixed.horizontal()
-  layout[s]:add(awful.widget.textclock())
 
   if s == 1 then
-    layout[s]:add(wibox.widget.systray())
-  end
 
-  fcfull = io.open('/sys/class/power_supply/BAT1/charge_full')
-  cfull = fcfull:read()
-  fcfull:close()
+    fcfull = io.open('/sys/class/power_supply/BAT1/charge_full')
+    cfull = fcfull:read()
+    fcfull:close()
 
-  fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
-  cnow = fcnow:read()
-  fcnow:close()
-
-  percents = 100*cnow/cfull
-
-  battery = wibox.widget.textbox()
-  battery:set_text(math.floor(percents) .. "% ?h ??m")
-  
-  batteryInterval = 15
-  batteryTimer = timer({timeout = batteryInterval})
-  batteryTimer:connect_signal('timeout', function () 
     fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
     cnow = fcnow:read()
     fcnow:close()
-    diff = percents - 100*cnow/cfull
+
     percents = 100*cnow/cfull
-    if diff >=0 then
-      seconds = batteryInterval*percents/diff
-    else
-      seconds = batteryInterval*(100 - percents)/diff
+
+    local batteryGraph = wibox.widget.base.make_widget()
+    batteryGraph.fit = function(mycross, width, height)
+       return batteryWidth, height
     end
-    hour = math.floor(seconds/3600)
-    minutes = math.floor(seconds/60 - hour*60)
-    battery:set_text(math.floor(percents) .. "% " .. hour .. 'h ' .. minutes ..'m')
+    
+    batteryGraph.draw = function(mycross, wibox, cr, width, height)
+    end
+   
 
-    flog = io.open('/tmp/battery.log','a+')
-    flog:write(os.time() .. ',' ..percents .. "\n")
-    flog:close()
-  end)
-  batteryTimer:start()
-  layout[s]:add(battery)
+    battery = wibox.widget.textbox()
+    battery.fit = function(mycross, width, height)
+       return 80, height
+    end
 
+    layout[s]:add(batteryGraph)
+    layout[s]:add(battery)
+    
+    battery:set_text(math.floor(percents) .. "% ?h ??m")
+    
+    batteryInterval = 30
+    batteryTimer = timer({timeout = batteryInterval})
+    batteryTimer:connect_signal('timeout', function () 
+      fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
+      cnow = fcnow:read()
+      fcnow:close()
+      diff = percents - 100*cnow/cfull
+      percents = 100*cnow/cfull
+      if diff >=0 then
+        seconds = batteryInterval*percents/diff
+      else
+        seconds = batteryInterval*(100 - percents)/diff
+      end
+      hour = math.floor(seconds/3600)
+      minutes = math.floor(seconds/60 - hour*60)
+      battery:set_text(math.floor(percents) .. "% " .. hour .. 'h ' .. minutes ..'m')
 
+      table.insert(batteryHistory, percents)
+      batteryHistorySize = batteryHistorySize + 1
+      if batteryHistorySize >= batteryWidth then
+        table.remove(batteryHistory, 1)
+        batteryHistorySize = batteryHistorySize - 1
+      end
 
+      flog = io.open('/tmp/battery.log','a+')
+      flog:write(os.time() .. ',' ..percents .. "\n")
+      flog:close()
+
+      batteryGraph.draw = function(mycross, wibox, cr, width, height)
+          
+          prev = batteryHistory[1]
+          maxD = 0
+          for i,p in ipairs(batteryHistory) do 
+            d = math.abs(prev - p)
+
+            if (maxD < d) then
+              maxD = d
+            end
+            prev = p
+          end  
+
+          x = batteryWidth - batteryHistorySize
+          prev = batteryHistory[1]
+          for i,p in ipairs(batteryHistory) do 
+            d = math.abs(prev - p)
+            if (maxD == 0) then
+              h = height
+            else
+              h = math.floor(height * d / maxD)
+            end
+
+             -- naughty.notify({ preset = naughty.config.presets.critical,
+             --  title = '',
+             --  text = cjson.encode({i, h,d,maxD})})
+
+            if (prev <= p) then
+              cr:set_source_rgba(0, 255, 0, 0.3)
+            else
+              cr:set_source_rgba(255, 0, 0, 0.5)
+            end 
+            cr:move_to(x, height)
+            cr:line_to(x, height - h)
+            cr:set_line_width(0.5)
+            cr:stroke()
+            x = x + 1
+            prev = p
+          end
+      end
+
+      batteryGraph:emit_signal("widget::updated")
+
+    end)
+    batteryTimer:start()
+    
+    layout[s]:add(wibox.widget.systray())
+    
+  end 
+
+  layout[s]:add(awful.widget.textclock())
   layout[s]:add(awful.widget.layoutbox(s))
 
   layout[s]:add(mylauncher[s])
+
   right_layout[s] = wibox.layout.align.horizontal()
   right_layout[s]:set_right(layout[s])
   command[s] = awful.widget.prompt({prompt = ': '})
