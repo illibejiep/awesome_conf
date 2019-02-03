@@ -7,6 +7,7 @@ require("awful.autofocus")
 local wibox = require("wibox")
 -- Theme handling library
 local beautiful = require("beautiful")
+
 -- Notification library
 local naughty = require("naughty")
 local menubar = require("menubar")
@@ -15,6 +16,22 @@ local mywidget = require("mywidget")
 local cjson = require('cjson')
 
 cjson.encode_sparse_array(true)
+
+function string:split( inSplitPattern, outResults )
+ 
+   if not outResults then
+      outResults = {}
+   end
+   local theStart = 1
+   local theSplitStart, theSplitEnd = string.find( self, inSplitPattern, theStart )
+   while theSplitStart do
+      table.insert( outResults, string.sub( self, theStart, theSplitStart-1 ) )
+      theStart = theSplitEnd + 1
+      theSplitStart, theSplitEnd = string.find( self, inSplitPattern, theStart )
+   end
+   table.insert( outResults, string.sub( self, theStart ) )
+   return outResults
+end
 
 home_dir = os.getenv("HOME")
 -- {{{ Error handling
@@ -35,6 +52,7 @@ function debugIt(val)
     }
   )
 end
+
 -- Handle runtime errors after startup
 do
     local in_error = false
@@ -52,6 +70,7 @@ end
 -- }}}
 
 awful.util.spawn('guake')
+awful.util.spawn('redshift-gtk -l 32:32 -t 6500:3500')
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, and wallpapers
@@ -135,13 +154,18 @@ clientsPosition = {}
 
 batteryHistory = {}
 batteryHistorySize = 0
+currentHistorySize = 0
 batteryWidth = 500
 
+cpu1mHistory = {}
+currentHistory = {}
+cpu1mHistorySize = 0
+
 for s = 1, screen.count() do
-  mylauncher[s] = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients() })
+  mylauncher[s] = awful.widget.launcher({ image = beautiful.awesome_icon, menu = awful.menu.clients()})
 
   mylauncher[s]:connect_signal("button::press",function ()
-      mylauncher[mouse.screen].menu = awful.menu.clients({x = 1900})
+      mylauncher[mouse.screen.index].menu = awful.menu.clients({x = 1900})
     end
   )
 
@@ -150,12 +174,38 @@ for s = 1, screen.count() do
   if s == 1 then
 
     fcfull = io.open('/sys/class/power_supply/BAT1/charge_full')
-    cfull = fcfull:read()
-    fcfull:close()
+    cfull = 100
+    if fcfull then
+      cfull = fcfull:read()
+      fcfull:close()
+    end
+    
 
     fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
-    cnow = fcnow:read()
-    fcnow:close()
+    cnow = 0
+    if fcnow then
+      cnow = fcnow:read()
+      fcnow:close()
+    end
+    
+
+    fvnow = io.open('/sys/class/power_supply/BAT1/voltage_now')
+    vnow = 0
+    if fvnow then
+      vnow = fvnow:read()
+      fvnow:close()
+    end
+    
+
+    fvoltMin = io.open('/sys/class/power_supply/BAT1/voltage_min_design')
+    voltMin = 0
+    if fvoltMin then
+      voltMin = fvoltMin:read()
+      fvoltMin:close()
+    end
+
+
+    voltMax = 12245000
 
     percents = 100*cnow/cfull
 
@@ -170,30 +220,43 @@ for s = 1, screen.count() do
 
     battery = wibox.widget.textbox()
     battery.fit = function(mycross, width, height)
-       return 80, height
+       return screen[1].geometry.width/14, height
     end
 
     layout[s]:add(batteryGraph)
     layout[s]:add(battery)
     
-    battery:set_text(math.floor(percents) .. "% ?h ??m")
-    
+    battery:set_text((math.floor(vnow/10000)/100) .. "v " .. math.floor(percents*10)/10 .. "% 0h 00m")
+
     batteryInterval = 30
     batteryTimer = timer({timeout = batteryInterval})
     batteryTimer:connect_signal('timeout', function () 
       fcnow = io.open('/sys/class/power_supply/BAT1/charge_now')
-      cnow = fcnow:read()
-      fcnow:close()
+      if fcnow then
+        cnow = fcnow:read()
+        fcnow:close()
+      end
+      
+      
+      fvnow = io.open('/sys/class/power_supply/BAT1/voltage_now')
+      if fvnow then
+        vnow = fvnow:read()
+        fvnow:close()
+      end
+      
+
       diff = percents - 100*cnow/cfull
       percents = 100*cnow/cfull
-      if diff >=0 then
+      if diff > 0 then
         seconds = batteryInterval*percents/diff
-      else
+      elseif diff < 0 then
         seconds = batteryInterval*(100 - percents)/diff
+      else
+        seconds = 0;
       end
       hour = math.floor(seconds/3600)
       minutes = math.floor(seconds/60 - hour*60)
-      battery:set_text(math.floor(percents) .. "% " .. hour .. 'h ' .. minutes ..'m')
+      battery:set_text((math.floor(vnow/10000)/100) .. "v " .. math.floor(percents*10)/10 .. "% " .. hour .. 'h ' .. minutes ..'m')
 
       table.insert(batteryHistory, percents)
       batteryHistorySize = batteryHistorySize + 1
@@ -202,49 +265,148 @@ for s = 1, screen.count() do
         batteryHistorySize = batteryHistorySize - 1
       end
 
-      flog = io.open('/tmp/battery.log','a+')
-      flog:write(os.time() .. ',' ..percents .. "\n")
-      flog:close()
+      -- awful.util.spawn_with_shell("uptime > /tmp/cpu1m")
 
+      -- fcpu1m = io.open('/tmp/cpu1m', 'r')
+      -- cpu1m = fcpu1m:read()
+      -- cpu1m = cpu1m:split(", ")
+      -- cpu1m = cpu1m[4]
+      -- cpu1m = cpu1m:split(" ")
+      -- cpu1m = cpu1m[4]
+      -- cpu1m = tonumber(cpu1m)/8
+      --naughty.notify({ preset = naughty.config.presets.critical,
+      --          title = '',
+      --          text = cpu1m})
+
+
+      -- fcpu1m:close()
+      
+      --if (cpu1m > 1) then
+      --  cpu1m = 1
+      --end
+
+                --naughty.notify({ preset = naughty.config.presets.critical,
+                --title = '',
+                --text = cpu1m})
+      
+      -- table.insert(cpu1mHistory, cpu1m)
+      -- cpu1mHistorySize = cpu1mHistorySize + 1
+      -- if cpu1mHistorySize >= batteryWidth then
+      --   table.remove(cpu1mHistory, 1)
+      --   cpu1mHistorySize = cpu1mHistorySize - 1
+      -- end
+
+      fstatus = io.open('/sys/class/power_supply/BAT1/status', 'r')
+      if fstatus then
+        bstatus = fstatus:read()    
+        fstatus:close()
+      end
+
+      fcurrent = io.open('/sys/class/power_supply/BAT1/current_now', 'r')
+      if fcurrent then
+        current = fcurrent:read()
+        fcurrent:close()
+      end
+
+      --flog = io.open('/home/illibejiep/battery.log','a+')
+      --flog:write(os.time() .. ',' ..current .. "\n")
+      --flog:close()
+
+      current = tonumber(current)
+      if (bstatus == 'Charging') then
+        current = -1*current
+      end
+      -- naughty.notify({title = 'asdf', text = cjson.encode({current, bstatus})})
+      -- naughty.notify({ preset = naughty.config.presets.critical,
+      --        title = '',
+      --           text = current})
+    
+      table.insert(currentHistory, current)
+      currentHistorySize = currentHistorySize + 1
+      if currentHistorySize >= batteryWidth then
+        table.remove(currentHistory, 1)
+        currentHistorySize = currentHistorySize - 1
+      end
       batteryGraph.draw = function(mycross, wibox, cr, width, height)
           
-          prev = batteryHistory[1]
-          maxD = 0
-          for i,p in ipairs(batteryHistory) do 
-            d = math.abs(prev - p)
+          -- prev = batteryHistory[1]
+          -- maxD = 0
+          -- for i,p in ipairs(batteryHistory) do 
+          --   d = math.abs(prev - p)
 
-            if (maxD < d) then
-              maxD = d
+          --   if (maxD < d) then
+          --     maxD = d
+          --   end
+          --   prev = p
+          -- end  
+
+          -- x = batteryWidth - batteryHistorySize
+          -- prev = batteryHistory[1]
+          -- for i,p in ipairs(batteryHistory) do 
+          --   d = math.abs(prev - p)
+          --   if (maxD == 0) then
+          --     h = height
+          --   else
+          --     h = math.floor(height * d / maxD)
+          --   end
+
+          --    -- naughty.notify({ preset = naughty.config.presets.critical,
+          --    --  title = '',
+          --    --  text = cjson.encode({i, h,d,maxD})})
+
+          --   if (prev <= p) then
+          --     cr:set_source_rgba(0, 255, 0, 0.3)
+          --   else
+          --     cr:set_source_rgba(255, 0, 0, 0.5)
+          --   end 
+          --   cr:move_to(x, height)
+          --   cr:line_to(x, height - h)
+          --   cr:set_line_width(0.5)
+          --   cr:stroke()
+          --   x = x + 1
+          --   prev = p
+          -- end
+
+          cr:set_source_rgba(255, 255, 255, 0.2)
+          maxCurrent = 1
+
+          for i,p in ipairs(currentHistory) do 
+            p = math.abs(p)
+            if (maxCurrent < p) then
+              maxCurrent = p
             end
-            prev = p
-          end  
+          end
 
           x = batteryWidth - batteryHistorySize
-          prev = batteryHistory[1]
-          for i,p in ipairs(batteryHistory) do 
-            d = math.abs(prev - p)
-            if (maxD == 0) then
-              h = height
-            else
-              h = math.floor(height * d / maxD)
-            end
 
-             -- naughty.notify({ preset = naughty.config.presets.critical,
-             --  title = '',
-             --  text = cjson.encode({i, h,d,maxD})})
-
-            if (prev <= p) then
-              cr:set_source_rgba(0, 255, 0, 0.3)
+          cr:move_to(x, height)
+          cr:set_line_width(0.5)
+          for i,p in ipairs(currentHistory) do 
+            if (p < 0) then
+              cr:set_source_rgba(0, 255, 0, 0.4)
             else
               cr:set_source_rgba(255, 0, 0, 0.5)
-            end 
-            cr:move_to(x, height)
-            cr:line_to(x, height - h)
-            cr:set_line_width(0.5)
+            end
+
+            p = math.abs(p)
+            h = 1+(height-2)*p/maxCurrent
+            cr:line_to(x, height - h )
             cr:stroke()
+            cr:line_to(x, height - h )
             x = x + 1
-            prev = p
           end
+
+
+          -- x = batteryWidth - batteryHistorySize
+          -- cr:move_to(x, height)
+          -- for i,cpu in ipairs(cpu1mHistory) do 
+          --   h = height*cpu
+          --   cr:line_to(x, height - h )
+          --   x = x + 1
+          -- end
+          
+          cr:stroke()
+
       end
 
       batteryGraph:emit_signal("widget::updated")
@@ -263,13 +425,13 @@ for s = 1, screen.count() do
 
   right_layout[s] = wibox.layout.align.horizontal()
   right_layout[s]:set_right(layout[s])
-  command[s] = awful.widget.prompt({prompt = ': '})
+  command[s] = awful.widget.prompt({prompt = '◣🚵 '})
 
   box_layout[s] = wibox.layout.align.horizontal();
   box_layout[s]:set_left(command[s])
   box_layout[s]:set_right(right_layout[s])
 
-  box[s] = awful.wibox( { type = "normal", position = "bottom", screen = s, ontop = false, height = 16 } )
+  box[s] = awful.wibox( { type = "normal", position = "bottom", screen = s, ontop = false, height = beautiful.menu_height } )
   box[s]:set_bg("#ffffff00")
   box[s]:set_widget(box_layout[s])
 end
@@ -331,15 +493,15 @@ globalkeys = awful.util.table.join(
               sy = screen[c.screen].geometry.y,
             }
         end
-        cPos = io.open('/tmp/clients_position','w+')
-        cPos:write(cjson.encode(clientsPosition))
-        cPos:close()
-        os.execute("xrandr --output HDMI2 --mode 3840x2160 --left-of eDP1") 
+        --cPos = io.open('/tmp/clients_position','w+')
+        --cPos:write(cjson.encode(clientsPosition))
+        --cPos:close()
+        os.execute("xrandr --output HDMI2 --mode 3840x2160 --left-of eDP1 --dpi 192") 
       end 
     ),
     awful.key({ modkey}, "l", 
       function () 
-        os.execute("xrandr --output HDMI2 --mode 1920x1080 --left-of eDP1")
+        os.execute("xrandr --output HDMI2 --mode 1920x1080 --left-of eDP1 --dpi 96")
       end 
     ),
     awful.key({ modkey }, "p", function () awful.util.spawn("poweroff") end ),
@@ -361,12 +523,13 @@ globalkeys = awful.util.table.join(
     -- Prompt
     awful.key({ modkey },            "r",     
     	function () 
-         command[mouse.screen]:run()
+         command[mouse.screen.index]:run()
     	end
     )
 )
 
 clientkeys = awful.util.table.join(
+    awful.key({ modkey,           }, "b",      function (c) c.border_width = 0 end),
     awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
     awful.key({ modkey,           }, "m",      function (c) c.maximized = not c.maximized  end),
     awful.key({ modkey, "Shift"   }, "m",      
@@ -391,7 +554,7 @@ for i = 1, 9 do
     globalkeys = awful.util.table.join(globalkeys,
         awful.key({ modkey }, "#" .. i + 9,
                   function ()
-                        local screen = mouse.screen
+                        local screen = mouse.screen.index
                         local tag = awful.tag.gettags(screen)[i]
                         if tag then
                            awful.tag.viewonly(tag)
@@ -399,7 +562,7 @@ for i = 1, 9 do
                   end),
         awful.key({ modkey, "Control" }, "#" .. i + 9,
                   function ()
-                      local screen = mouse.screen
+                      local screen = mouse.screen.index
                       local tag = awful.tag.gettags(screen)[i]
                       if tag then
                          awful.tag.viewtoggle(tag)
@@ -486,11 +649,11 @@ awful.rules.rules = {
 -- }}}
 
 clientsPosition = {}
-cPos = io.open('/tmp/clients_position','r')
-if (cPos) then
-  clientsPosition = cjson.decode(cPos:read())
-  cPos:close()
-end
+--cPos = io.open('/tmp/clients_position','r')
+--if (cPos) then
+--  clientsPosition = cjson.decode(cPos:read())
+--  cPos:close()
+--end
 --debugIt(clientsPosition)
 
 -- {{{ Signals
@@ -560,7 +723,7 @@ client.connect_signal("manage", function (c, startup)
 
         awful.titlebar(c):set_widget(layout)
     end
-    awful.client.movetoscreen(c, mouse.screen)
+    awful.client.movetoscreen(c, mouse.screen.index)
 
     for id,data in pairs(clientsPosition) do
       id = id + 0
@@ -577,6 +740,7 @@ client.connect_signal("manage", function (c, startup)
         --             text = cjson.encode(cgeometry)})
       end
     end
+    --client.focus = c
 
 end)
 
